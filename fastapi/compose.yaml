@@ -1,11 +1,23 @@
 services:
+# Container api
   api:
     build:
       context: .
       target: builder
     container_name: fastapi-application
     environment:
-      PORT: 8000
+      PORT: ${API_PORT}
+    #Då styrs värdet av .env (t.ex. API_PORT=8000) och du kan enkelt ändra det utan att röra docker-compose.yml
     ports:
-      - '8000:8000'
-    restart: "no"
+       - "${API_PORT}:8000"
+    #bättre om containern råkar krascha
+    restart: unless-stopped
+    # health check
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:8000/ || exit 1"]
+      interval: 10s
+      retries: 5
+      timeout: 5s
+    # vill kunna ändra kod utan att bygga om containern hela tiden
+    volumes:
+      - ./app:/app
