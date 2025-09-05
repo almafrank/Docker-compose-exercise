@@ -1,34 +1,36 @@
 services:
 # Container web : ->es
   elasticsearch:
+    #Startar en container med bilden elasticsearch:7.16.1.
     image: elasticsearch:7.16.1
     container_name: es
-    #Enviroment variables
+    #Här styr du hur Elasticsearch körs:
+    #Enviroment variables:discovery.type=single-node → kör som ensam instans.ES_JAVA_OPTS=-Xms512m -Xmx512m → hur mycket minne Elasticsearch får.
     environment:
-      discovery.type: single-node
-      ES_JAVA_OPTS: "-Xms512m -Xmx512m"
+      discovery.type: ${DISCOVERY_TYPE}
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS}
     #Host port {web browser: docker}
     ports:
       - "9200:9200"
       - "9300:9300"
-    #Health check of port localhost 9200 and program 
+    #Health check of port localhost 9200 and program var 10 sekund
     healthcheck:
       test: ["CMD-SHELL", "curl --silent --fail localhost:9200/_cluster/health || exit 1"]
       interval: 10s
       timeout: 10s
       retries: 3
-    #Run om network elastic-> bridge network
+    #Run om network elastic-> bridge network.Kopplar Elasticsearch till nätverket elastic så att Logstash & Kibana kan prata med den.
     networks:
       - elastic
-  #Container db  : ->log
+  #Container logstash : ->log
   logstash:
     image: logstash:7.16.1
     container_name: log
     # Enviroment variables
     environment:
-      discovery.seed_hosts: logstash
-      LS_JAVA_OPTS: "-Xms512m -Xmx512m"
-    #Save data from log when container is down 
+      discovery.seed_hosts: ${DISCOVERY_SEED_HOSTS}
+      LS_JAVA_OPTS: ${LS_JAVA_OPTS}
+    #Save data from log when container is down in files on your computer
     volumes:
       - ./logstash/pipeline/logstash-nginx.config:/usr/share/logstash/pipeline/logstash-nginx.config
       - ./logstash/nginx.log:/home/nginx.log
@@ -38,25 +40,26 @@ services:
       - "5000:5000/udp"
       - "5044:5044"
       - "9600:9600"
-    # This container waits on  elastic search to start first”
+    # This container waits on  elastic search to start first so it kan talk to it”
     depends_on:
       - elasticsearch
     #Run om network elastic-> bridge network
     networks:
       - elastic
     command: logstash -f /usr/share/logstash/pipeline/logstash-nginx.config
-  #Container kib
+  #Container kibana-> kib
   kibana:
     image: kibana:7.16.1
     container_name: kib
     ports:
       - "5601:5601"
-     # This container waits on  elastic search to start first”
+     # This container waits on  elastic search to start first so it can talk to it”
     depends_on:
       - elasticsearch
     #Run om network elastic-> bridge network
     networks:
       - elastic
+    #Skapar ett eget nätverk (elastic) så alla tre containrar kan prata med varandra utan att du behöver hårdkoda IP-adresser.
 networks:
   elastic:
     driver: bridge
