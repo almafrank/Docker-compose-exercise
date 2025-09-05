@@ -1,22 +1,45 @@
+#Web container- app/aspnetapp
 services:
   web:
     build: app/aspnetapp
+    # host port för web :{web browser: docker}
     ports:
       - 80:80
+    #kopplad till db
+    depends_on:
+      - db
+    # network kallad backend-> Network aspnet-mssql_backend
+    networks:
+    - backend
+
+#Db container 
   db:
+  #Enviroment variable-password. Ligger i env fil som yaml fil kan hitta...
     environment:
       ACCEPT_EULA: "Y"
-      SA_PASSWORD: example_123
+      SA_PASSWORD: ${SA_PASSWORD}
     # mssql server image isn't available for arm64 architecture, so we use azure-sql instead
     image: mcr.microsoft.com/azure-sql-edge:1.0.4
-    # If you really want to use MS SQL Server, uncomment the following line
-    #image: mcr.microsoft.com/mssql/server
+    
+    #host port för db: {web browser:docker}
+    ports:
+    - "1433:1433"
+    # spara data från db
+    volumes:
+    - db_data:/var/opt/mssql
     restart: always
     healthcheck:
         test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P example_123 -Q 'SELECT 1' || exit 1"]
         interval: 10s
         retries: 10
         start_period: 10s
-        timeout: 3s     
+        timeout: 3s    
+    networks:
+      - backend # network kallad backend-> Network aspnet-mssql_backend
+# Sparar databas data när en container stänger
+volumes:
+  db_data:
+networks:
+  backend:
          
        
