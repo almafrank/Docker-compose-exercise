@@ -1,7 +1,23 @@
 services:
+#Container web
   web: 
     build:
       context: app
       target: builder
+    # Kör på samma port i docker men olika portar på web browser
     ports: 
       - '8000:8000'
+      - '8001:8000'
+    # Om containern kraschar kan den startas om automatiskt
+    restart: always
+    #kollar programvarans, http hälsa varje 30 sekund 
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1 && curl -f http://localhost:8001/health || exit 1"]
+      interval: 30s
+      retries: 3
+      timeout: 10s
+    networks:
+      - webnet
+networks:
+  webnet: 
+    driver: bridge 
