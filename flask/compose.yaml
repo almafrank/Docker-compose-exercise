@@ -22,3 +22,9 @@ services:
     restart: unless-stopped
     volumes:
       - ./app:/app
+    networks:
+      - my_flask_network
+
+networks:
+  my_flask_network:
+    driver: bridge # Standard är "bridge", men du kan även använda overlay, host, etc
