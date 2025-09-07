@@ -6,12 +6,19 @@ services:
       target: builder
     # flask requires SIGINT to stop gracefully
     # (default stop signal from Compose is SIGTERM)
+    container_name: flask-Web-application
     stop_signal: SIGINT
+    environment:
+      PORT: ${WEB_PORT}
     ports:
-      - '8000:8000'
+       - "${WEB_PORT}:8000"
+    #healthcheck of program and http every 30 seconds
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 30s
       retries: 3
       timeout: 10s
+    
     restart: unless-stopped
+    volumes:
+      - ./app:/app
