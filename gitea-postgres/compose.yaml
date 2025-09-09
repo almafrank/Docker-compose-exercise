@@ -1,4 +1,31 @@
 services:
+  # Traefik reverse proxy
+  traefik:
+    image: traefik:v3.5
+    command:
+      - "--api.insecure=true"        # Aktivera Traefiks dashboard (ej för produktion)
+      - "--providers.docker=true"    # Läs labels från Docker
+      - "--entrypoints.web.address=:80" # Entrypoint på port 80
+    ports:
+      - "80:80"
+      - "8080:8080" # Traefik dashboard
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+     
+    networks:
+      - traefik_network
+
+  # Testcontainer
+  whoami:
+    image: containous/whoami
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.whoami.rule=Host(`whoami.localhost`)"
+      - "traefik.http.routers.whoami.entrypoints=web"
+      - "traefik.http.services.whoami.loadbalancer.server.port=80"
+    networks:
+      - traefik_network
+
 # Container opensource github web
   gitea:
     image: gitea/gitea:latest
@@ -8,22 +35,29 @@ services:
       - GITEA__database__HOST=${DB_HOST}
       - GITEA__database__NAME=${DB_NAME}
       - GITEA__database__USER=${DB_USER}
-      - GITEA__database__PASSWORD=${DB_PASSWD}
+      - GITEA__database__PASSWD=${DB_PASSWD}
     restart: always
     volumes:
       - git_data:/data
+    depends_on:
+      - db
+    #
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gitea.rule=Host(\"gitea.localhost\")"
+      - "traefik.http.routers.gitea.entrypoints=web"
+      - "traefik.http.services.gitea.loadbalancer.server.port=3000"
     networks:
-      - gitea_network
+     
+      
+      - traefik_network
       - postgres_network
+
     
-    ports:
-      - "${WEB_PORT}:3000"
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:3000/health || exit 1"]
-      interval: 30s
-      retries: 3
-      timeout: 10s
-  #Container db
+    
+
+    
+  #Container db(endast internt)
   db:
     image: postgres:alpine
     environment:
@@ -36,13 +70,17 @@ services:
     expose:
       - 5432
     networks:
-    - postgres_network
+      - postgres_network
 volumes:
-  db_data:
+  
   git_data:
+  db_data:
+
 networks:
-  gitea_network:
+  traefik_network:
   postgres_network:
+
+
   
   
     
