@@ -1,8 +1,37 @@
+#nätverk för proxy traefik och db nätverk
+networks:
+  proxy :
+    name: proxy
+  db:
+    name: db
+
+
 services:
+  #
+  traefik:
+    image: traefik:v3.5 # specificera version
+    command:
+      - --api.dashboard=true
+      - --api.insecure=true
+      - --prociders.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+    ports:
+      - '80:80'
+      - '8080:8080'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro #kommunisera med socket
+    networks:
+      - proxy
+    
+  #Db redis container
   redis:
     image: redislabs/redismod
-    ports:
-      - '6379:6379'
+    #ports:
+    #  - '6379:6379'
+    networks:
+     - db #existerar i egen nätverk
+
   web:
     build:
       context: .
@@ -10,9 +39,18 @@ services:
     # flask requires SIGINT to stop gracefully
     # (default stop signal from Compose is SIGTERM)
     stop_signal: SIGINT
-    ports:
-      - '8000:8000'
+    labels: 
+     - traefik.enable=true
+     - traefik.docker.network=proxy # två nätverk
+     - "traefik.http.routers.web.rule=Host(`frontend.localhost`)"
+     - "traefik.http.routers.web.entrypoints=web"
+     - "traefik.http.services.web.loadbalancer.server.port=8000"
+    #ports:
+    #  - '8000:8000'
     volumes:
       - .:/code
     depends_on:
       - redis
+    networks:
+    - proxy
+    - db
