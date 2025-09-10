@@ -1,9 +1,8 @@
 #nätverk för proxy traefik och db nätverk
 networks:
   proxy :
-    name: proxy
   db:
-    name: db
+    
 
 
 services:
@@ -13,7 +12,7 @@ services:
     command:
       - --api.dashboard=true
       - --api.insecure=true
-      - --prociders.docker=true
+      - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
     ports:
@@ -42,9 +41,9 @@ services:
     labels: 
      - traefik.enable=true
      - traefik.docker.network=proxy # två nätverk
-     - "traefik.http.routers.web.rule=Host(`frontend.localhost`)"
-     - "traefik.http.routers.web.entrypoints=web"
-     - "traefik.http.services.web.loadbalancer.server.port=8000"
+     - traefik.http.routers.web.rule=Host(`frontend.localhost`)
+     - traefik.http.routers.web.entrypoints=web
+     - traefik.http.services.web.loadbalancer.server.port=8000
     #ports:
     #  - '8000:8000'
     volumes:
